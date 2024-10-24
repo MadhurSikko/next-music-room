@@ -1,6 +1,7 @@
 import NextAuth from "next-auth"
 import Spotify from "next-auth/providers/spotify"
 import "next-auth/jwt"
+import { refreshAccessToken } from "./app/actions/actions";
 
 const scopes = [
     'user-read-private',
@@ -13,10 +14,6 @@ const params = {
 
 const AUTHORIZE_URL = "https://accounts.spotify.com/authorize?" + (new URLSearchParams(params)).toString();
 
-const config = {
-    
-}
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Spotify({
@@ -27,17 +24,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-
-    async jwt({token, account}) {
+    async jwt({token, account, session}) {
         if (account) {
-            return {...token, accessToken: account.access_token, refreshToken: account.refresh_token}
+          token.accessToken = account.access_token;
+          token.refreshToken = account.refresh_token;
+          const expiresAt = account.expires_at ?? 0;
+          token.accessTokenExpires = expiresAt*1000;
+          return token;
         }
-        return token;
 
+        if (Date.now() < token.accessTokenExpires) {
+          return token
+        }
+        
+        return await refreshAccessToken(token, session.refreshToken);
+        
     },
     async session({session, token}) {
         session.accessToken = token.accessToken;
         session.refreshToken = token.refreshToken;
+
         return session;
     }
   }
@@ -54,5 +60,6 @@ declare module "next-auth" {
     interface JWT {
       accessToken?: string,
       refreshToken?: string,
+      accessTokenExpires: number,
     }
   }

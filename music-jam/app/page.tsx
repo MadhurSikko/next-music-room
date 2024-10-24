@@ -9,9 +9,6 @@ export default async function Home() {
       <div>
         <SignOut />
         {session?.accessToken}
-        <br />
-        <br />
-        {session?.refreshToken}
       </div>
     )
   }
