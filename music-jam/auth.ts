@@ -5,7 +5,8 @@ import { refreshAccessToken } from "./app/actions/actions";
 
 const scopes = [
     'user-read-private',
-    'user-read-email'
+    'user-read-email',
+    'user-modify-playback-state',
 ].join(",");
 
 const params = {
@@ -29,7 +30,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.accessToken = account.access_token;
           token.refreshToken = account.refresh_token;
           const expiresAt = account.expires_at ?? 0;
-          token.accessTokenExpires = expiresAt*1000;
+          token.accessTokenExpires = Date.now() + 60*1000;
+          console.log(token.accessTokenExpires);
+          console.log(Date.now());
           return token;
         }
 
@@ -37,7 +40,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return token
         }
         
-        return await refreshAccessToken(token, session.refreshToken);
+        return await refreshAccessToken(token.accessToken, token.refreshToken);
         
     },
     async session({session, token}) {
